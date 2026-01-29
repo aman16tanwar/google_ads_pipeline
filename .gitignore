@@ -1,0 +1,47 @@
+# Credentials & Secrets
+.env
+!.env.example
+*.json
+google-ads.yaml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.venv/
+venv/
+env/
+.eggs/
+*.egg-info/
+dist/
+build/
+
+# Large data files
+*.csv
+!geotargets-2025-04-01.csv
+
+# Jupyter Notebooks checkpoints
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Excluded scripts
+skibig3_*.py
+step_*.py
+step*.py
+cloud-function-*.py
+text.txt
