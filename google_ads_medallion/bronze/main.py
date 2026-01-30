@@ -8,6 +8,7 @@ from google.ads.googleads.client import GoogleAdsClient
 from google.oauth2 import service_account
 from pandas_gbq import to_gbq
 from google.cloud import bigquery
+from utils.bigquery_loader import load_to_bigquery
 # ✅ Set Google Cloud credentials
 # os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "googleads-bigquery.json"
 
@@ -19,7 +20,7 @@ GOOGLE_ADS_LOGIN_CUSTOMER_ID = os.getenv('GOOGLE_ADS_LOGIN_CUSTOMER_ID')
 JSON_KEY_FILE_PATH = os.getenv('GOOGLE_ADS_JSON_KEY_FILE_PATH')
 GOOGLE_ADS_IMPERSONATED_EMAIL = os.getenv('GOOGLE_ADS_IMPERSONATED_EMAIL')
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
-TABLE_ID = f"{GCP_PROJECT_ID}.{os.getenv('BIGQUERY_DATASET_ALL_MAIN')}.{os.getenv('BIGQUERY_TABLE_ALL_MAIN')}"
+TABLE_ID = f"{GCP_PROJECT_ID}.{os.getenv('BIGQUERY_BRONZE_DATESET')}.{os.getenv('BIGQUERY_BRONZE_ALL_MAIN')}"
 
 DEVICE_MAPPING = {
     0: "Unknown", 1: "Mobile", 2: "Tablet", 3: "Desktop", 4: "Connected TV", 5: "Other"
@@ -180,7 +181,8 @@ def main():
         print("❌ No valid data collected. Exiting.")
         return
 
-    # df_all = pd.concat(final_dataframes, ignore_index=True)
+    df_all = pd.concat(final_dataframes, ignore_index=True)
+    
     # df_all["Conversion Name"] = df_all["Conversion Name"].fillna("Unknown")
     # if "Cost Micros" in df_all.columns:
     #     df_all["Cost"] = df_all["Cost Micros"].fillna(0) / 1_000_000
@@ -204,31 +206,13 @@ def main():
         "Device", "Conversion Name", "Date", "Impressions", "Clicks", "Cost",
         "All Conversions", "All Conversions Value"
     ]]
+    load_to_bigquery(df_all,TABLE_ID)
 
     # print("✅ Final dataframe shape:", df_all.shape)
     # print("🧾 Unique accounts in dataframe:", df_all['Account ID'].nunique())
     # print(df_all['Account Name'].value_counts().head(10))
 
-    credentials = service_account.Credentials.from_service_account_file(os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
+    # credentials = service_account.Credentials.from_service_account_file(os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
     # print("🔁 Uploading final dataframe of shape:", df_all.shape)
 
-    bq_client = bigquery.Client(credentials=credentials, project=GCP_PROJECT_ID)
-    query = f"""
-        DELETE FROM `{TABLE_ID}`
-        WHERE Date >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
-    """
-    bq_client.query(query).result()
-    print("🧹 Deleted last 30 days from BigQuery before uploading new data.")
-
-    to_gbq(
-        df_all,
-        destination_table=TABLE_ID,
-        project_id=GCP_PROJECT_ID,
-        credentials=credentials,
-        if_exists="append"  # Change to 'append' if you want to keep historical data
-    )
-
-    print(f"✅ Data uploaded to BigQuery: {TABLE_ID}")
-    print(df_all.head(10))
-
-
+   

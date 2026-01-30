@@ -2,11 +2,9 @@
 #    CONFIGURATION SECTION   #
 # ========================== #
 import os
-import pandas as pd
 from dotenv import load_dotenv
-from google.oauth2 import service_account
-from pandas_gbq import to_gbq
 from google.cloud import bigquery
+from pandas_gbq import to_gbq
 # ✅ Set Google Cloud credentials
 # os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "googleads-bigquery.json"
 
@@ -15,36 +13,31 @@ load_dotenv()
 
 
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
-TABLE_ID_main = f"{GCP_PROJECT_ID}.{os.getenv('BIGQUERY_DATASET_ALL_MAIN')}.{os.getenv('BIGQUERY_TABLE_ALL_MAIN')}"
-TABLE_ID_location = f"{GCP_PROJECT_ID}.{os.getenv('BIGQUERY_DATASET_ALL_MAIN')}.{os.getenv('BIGQUERY_TABLE_ALL_LOCATION')}"
-TABLE_ID_gender = f"{GCP_PROJECT_ID}.{os.getenv('BIGQUERY_DATASET_ALL_MAIN')}.{os.getenv('BIGQUERY_TABLE_ALL_GENDER')}"
-TABLE_ID_age = f"{GCP_PROJECT_ID}.{os.getenv('BIGQUERY_DATASET_ALL_MAIN')}.{os.getenv('BIGQUERY_TABLE_ALL_AGE')}"
 
 
 
-#main_upload
-
-
-    # print("🔁 Uploading final dataframe of shape:", df_all.shape)
-
-def bq_main():
-    credentials = service_account.Credentials.from_service_account_file()
-    bq_client = bigquery.Client(credentials=credentials, project=GCP_PROJECT_ID)
+def load_to_bigquery(df, table_name):
+    
+    bq_client = bigquery.Client( project=GCP_PROJECT_ID)
     query = f"""
-        DELETE FROM `{TABLE_ID_main}`
+        DELETE FROM `{table_name}`
         WHERE Date >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
     """
     bq_client.query(query).result()
     print("🧹 Deleted last 30 days from BigQuery before uploading new data.")
 
+    
+    
     to_gbq(
-        df_all,
-        destination_table=TABLE_ID,s
+        df,
+        destination_table=table_name,
         project_id=GCP_PROJECT_ID,
-        credentials=credentials,
         if_exists="append"  # Change to 'append' if you want to keep historical data
     )
 
-    print(f"✅ Data uploaded to BigQuery: {TABLE_ID}")
-    print(df_all.head(10))
+    print(f"✅ Data uploaded to BigQuery: {table_name}")
+    print(df.head(10))
+
+
+
 
