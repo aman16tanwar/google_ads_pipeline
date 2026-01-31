@@ -1,15 +1,6 @@
-# ========================== #
-#    CONFIGURATION SECTION   #
-# ========================== #
-import os
-import pandas as pd
 from dotenv import load_dotenv
+import os
 from google.ads.googleads.client import GoogleAdsClient
-from google.oauth2 import service_account
-from pandas_gbq import to_gbq
-from google.cloud import bigquery
-# ✅ Set Google Cloud credentials
-# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "googleads-bigquery.json"
 
 # ✅ Load environment variables
 load_dotenv()
@@ -19,11 +10,9 @@ GOOGLE_ADS_LOGIN_CUSTOMER_ID = os.getenv('GOOGLE_ADS_LOGIN_CUSTOMER_ID')
 JSON_KEY_FILE_PATH = os.getenv('GOOGLE_ADS_JSON_KEY_FILE_PATH')
 GOOGLE_ADS_IMPERSONATED_EMAIL = os.getenv('GOOGLE_ADS_IMPERSONATED_EMAIL')
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
-TABLE_ID = f"{GCP_PROJECT_ID}.{os.getenv('BIGQUERY_DATASET_ALL_MAIN')}.{os.getenv('BIGQUERY_TABLE_ALL_MAIN')}"
 
-DEVICE_MAPPING = {
-    0: "Unknown", 1: "Mobile", 2: "Tablet", 3: "Desktop", 4: "Connected TV", 5: "Other"
-}
+
+
 
 # ========================== #
 #     FETCH ENABLED ACCOUNTS #
@@ -60,3 +49,7 @@ def fetch_enabled_accounts():
 
     print(f"✅ {len(accounts)} active client accounts found.")
     return accounts
+
+
+
+   
