@@ -5,6 +5,9 @@ import os
 from dotenv import load_dotenv
 from google.cloud import bigquery
 from pandas_gbq import to_gbq
+from utils.logger import setup_logger
+
+logger=setup_logger(__name__)
 # ✅ Set Google Cloud credentials
 # os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "googleads-bigquery.json"
 
@@ -19,13 +22,15 @@ GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
 def load_to_bigquery(df, table_name):
     
     bq_client = bigquery.Client( project=GCP_PROJECT_ID)
-    query = f"""
-        DELETE FROM `{table_name}`
-        WHERE Date >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
-    """
-    bq_client.query(query).result()
-    print("🧹 Deleted last 30 days from BigQuery before uploading new data.")
-
+    try:
+        query = f"""
+            DELETE FROM `{table_name}`
+            WHERE date >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
+        """
+        bq_client.query(query).result()
+        logger.info("🧹 Deleted last 30 days from BigQuery before uploading new data.")
+    except Exception as e:
+        logger.warning(f"⚠️ Delete skipped (table may be new): {e}")   
     
     
     to_gbq(
@@ -35,8 +40,8 @@ def load_to_bigquery(df, table_name):
         if_exists="append"  # Change to 'append' if you want to keep historical data
     )
 
-    print(f"✅ Data uploaded to BigQuery: {table_name}")
-    print(df.head(10))
+    logger.info(f"✅ Data uploaded to BigQuery: {table_name}")
+
 
 
 

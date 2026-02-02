@@ -1,25 +1,29 @@
-# Configuration
+# ========================== #
+#    CONFIGURATION SECTION   #
+# ========================== #
 import os
 import pandas as pd
 from dotenv import load_dotenv
 from google.ads.googleads.client import GoogleAdsClient
-from google.oauth2 import service_account
-from pandas_gbq import to_gbq
-from google.cloud import bigquery
-from utils.bigquery_loader import load_bq_age
 
-# ✅ Set up Google Cloud Credentials
-
-
-# ✅ Load environment variables
+from utils.bigquery_loader import load_to_bigquery
+from utils.google_ads_client import fetch_enabled_accounts
+from utils.logger import setup_logger
+# ✅ Set Google Cloud credentials
+# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "googleads-bigquery.json"
+logger=setup_logger(__name__)
 load_dotenv()
-
 DEVELOPER_TOKEN = os.getenv('GOOGLE_ADS_DEVELOPER_TOKEN')
 GOOGLE_ADS_LOGIN_CUSTOMER_ID = os.getenv('GOOGLE_ADS_LOGIN_CUSTOMER_ID')
 JSON_KEY_FILE_PATH = os.getenv('GOOGLE_ADS_JSON_KEY_FILE_PATH')
+
 GOOGLE_ADS_IMPERSONATED_EMAIL = os.getenv('GOOGLE_ADS_IMPERSONATED_EMAIL')
+
+
+
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
-TABLE_ID = f"{GCP_PROJECT_ID}.{os.getenv('BIGQUERY_BRONZE_DATESET')}.{os.getenv('BIGQUERY_TABLE_ALL_AGE')}"
+TABLE_ID = f"{GCP_PROJECT_ID}.{os.getenv('BIGQUERY_BRONZE_DATASET')}.{os.getenv('BIGQUERY_BRONZE_MAIN_CAMPAIGN_AGE')}"
+
 
 AGE_RANGE_MAPPING = {
     503001: "18-24",
@@ -31,37 +35,7 @@ AGE_RANGE_MAPPING = {
     503999: "Unknown"
 }
 
-def fetch_enabled_accounts():
-    config = {
-        "developer_token": DEVELOPER_TOKEN,
-        "login_customer_id": GOOGLE_ADS_LOGIN_CUSTOMER_ID,
-        "json_key_file_path": JSON_KEY_FILE_PATH,
-        "impersonated_email": GOOGLE_ADS_IMPERSONATED_EMAIL,
-        "use_proto_plus": True
-    }
-    client = GoogleAdsClient.load_from_dict(config)
-    service = client.get_service("GoogleAdsService")
 
-    query = """
-        SELECT customer_client.client_customer,
-               customer_client.descriptive_name,
-               customer_client.manager,
-               customer_client.status
-        FROM customer_client
-        WHERE customer_client.level = 1
-        AND customer_client.status = 'ENABLED'
-    """
-
-    response = service.search(customer_id=GOOGLE_ADS_LOGIN_CUSTOMER_ID, query=query)
-    accounts = []
-    for row in response:
-        if not row.customer_client.manager:
-            accounts.append({
-                "customer_id": row.customer_client.client_customer.replace("customers/", ""),
-                "name": row.customer_client.descriptive_name
-            })
-    print(f"✅ {len(accounts)} active client accounts found.")
-    return accounts
 
 def get_age_range_data(client, customer_id):
     ga_service = client.get_service("GoogleAdsService")
@@ -92,19 +66,19 @@ def get_age_range_data(client, customer_id):
             age_range_label = AGE_RANGE_MAPPING.get(age_id, "Unknown")
 
             age_data.append({
-                'Resource Name': row.age_range_view.resource_name,
-                'Campaign ID': row.campaign.id,
-                'Campaign Name': row.campaign.name,
-                'Campaign Type': row.campaign.advertising_channel_type.name if row.campaign.advertising_channel_type else 'Unknown',
-                'Ad Group ID': row.ad_group.id,
-                'Ad Group Name': row.ad_group.name,
-                'Age Range': age_range_label, 
-                'Impressions': row.metrics.impressions,
-                'Clicks': row.metrics.clicks,
-                'Cost Micros': row.metrics.cost_micros,
-                'All Conversions': float(row.metrics.all_conversions),
-                'All Conversions Value': float(row.metrics.all_conversions_value),
-                'Date': row.segments.date
+                'resource_name': row.age_range_view.resource_name,
+                'campaign_id': row.campaign.id,
+                'campaign_name': row.campaign.name,
+                'campaign_type': row.campaign.advertising_channel_type.name if row.campaign.advertising_channel_type else 'Unknown',
+                'ad_group_id': row.ad_group.id,
+                'ad_group_name': row.ad_group.name,
+                'age_range': age_range_label, 
+                'impressions': row.metrics.impressions,
+                'clicks': row.metrics.clicks,
+                'cost_micros': row.metrics.cost_micros,
+                'all_conversions': float(row.metrics.all_conversions),
+                'all_conversions_value': float(row.metrics.all_conversions_value),
+                'date': row.segments.date
             })
     return age_data
 
@@ -133,13 +107,13 @@ def get_conversion_data(client, customer_id):
             age_range_label = AGE_RANGE_MAPPING.get(age_id, "Unknown")
 
             conversion_data.append({
-                'Campaign Name': row.campaign.name,
-                'Ad Group ID': row.ad_group.id,
-                'Age Range': age_range_label, 
-                'Conversion Name': row.segments.conversion_action_name,
-                'All Conversions': float(row.metrics.all_conversions),
-                'All Conversions Value': float(row.metrics.all_conversions_value),
-                'Date': row.segments.date
+                'campaign_name': row.campaign.name,
+                'ad_group_id': row.ad_group.id,
+                'age_range': age_range_label, 
+                'conversion_name': row.segments.conversion_action_name,
+                'all_conversions': float(row.metrics.all_conversions),
+                'all_conversions_value': float(row.metrics.all_conversions_value),
+                'date': row.segments.date
             })
     return conversion_data
 
@@ -150,7 +124,7 @@ def main():
     for acc in accounts:
         acc_id = acc["customer_id"]
         acc_name = acc["name"]
-        print(f"\n▶️ Processing account: {acc_id} - {acc_name}")
+        logger.info(f"\n▶️ Processing account: {acc_id} - {acc_name}")
 
         try:
             client = GoogleAdsClient.load_from_dict({
@@ -166,69 +140,33 @@ def main():
             df_conversion = pd.DataFrame(get_conversion_data(client, acc_id))
 
             if df_age.empty and df_conversion.empty:
-                print(f"⚠️ No data for account {acc_id}, skipping.")
+                logger.warning(f"⚠️ No data for account {acc_id}, skipping.")
                 continue
 
-            # Convert dates
-            df_age["Date"] = pd.to_datetime(df_age["Date"])
-            df_conversion["Date"] = pd.to_datetime(df_conversion["Date"])
-
-            # Prepare age metrics
-            df_age["Conversion Name"] = "Unknown"
-            df_age["Cost"] = df_age["Cost Micros"].fillna(0) / 1_000_000
-            df_age = df_age.drop(columns=["Cost Micros"], errors='ignore')
-
-            # Prepare conversion rows
-            df_conversion["Clicks"] = None
-            df_conversion["Impressions"] = None
-            df_conversion["Cost"] = None
-            df_conversion["Campaign ID"] = None
-            df_conversion["Campaign Type"] = None
-            df_conversion["Ad Group Name"] = None
-            df_conversion["Resource Name"] = "Unknown"
-
-            # Add account info
-            df_age["Account ID"] = int(acc_id)
-            df_age["Account Name"] = acc_name
-            df_conversion["Account ID"] = int(acc_id)
-            df_conversion["Account Name"] = acc_name
-
-            # Reindex to BigQuery schema
-            column_order = [
-                "Account ID", "Account Name", "Campaign ID", "Campaign Name", "Campaign Type",
-                "Ad Group ID", "Ad Group Name", "Date", "Age Range", "Conversion Name",
-                "Impressions", "Clicks", "Cost", "All Conversions", "All Conversions Value", "Resource Name"
-            ]
-            df_age = df_age.reindex(columns=column_order)
-            df_conversion = df_conversion.reindex(columns=column_order)
+            
 
             # Concatenate safely
             df_final = pd.concat([df_age, df_conversion], ignore_index=True)
+            df_final["account_id"] = acc_id                                                      
+            df_final["account_name"] = acc_name  
             final_dataframes.append(df_final)
 
         except Exception as e:
-            print(f"❌ Error in account {acc_id}: {e}")
+            logger.error(f"❌ Error in account {acc_id}: {e}")
 
     if not final_dataframes:
-        print("❌ No valid data collected. Exiting.")
+        logger.error(f"❌ No valid data collected. Exiting.")
         return
 
     # ✅ Combine all accounts
     df_all = pd.concat(final_dataframes, ignore_index=True)
 
-    # 🔐 Ensure critical columns exist
-    for col in ["All Conversions", "All Conversions Value", "Conversion Name"]:
-        if col not in df_all.columns:
-            df_all[col] = None
-
-    column_order = [
-        "Account ID", "Account Name", "Campaign ID", "Campaign Name", "Campaign Type",
-        "Ad Group ID", "Ad Group Name", "Date", "Age Range", "Conversion Name",
-        "Impressions", "Clicks", "Cost", "All Conversions", "All Conversions Value", "Resource Name"
-    ]
-    df_all = df_all[column_order]
-    load_bq_age(df_all,TABLE_ID)
-
+   
     # Upload to BigQuery
+    load_to_bigquery(df_all,TABLE_ID)
+
+if __name__ == "__main__":                                                                   
+    main()   
+   
 
 

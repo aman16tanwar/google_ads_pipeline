@@ -1,6 +1,9 @@
 from dotenv import load_dotenv
 import os
 from google.ads.googleads.client import GoogleAdsClient
+from utils.logger import setup_logger
+
+logger=setup_logger(__name__)
 
 # ✅ Load environment variables
 load_dotenv()
@@ -47,7 +50,7 @@ def fetch_enabled_accounts():
                 "name": row.customer_client.descriptive_name
             })
 
-    print(f"✅ {len(accounts)} active client accounts found.")
+    logger.info(f"{len(accounts)} active client accounts found.")
     return accounts
 
 
