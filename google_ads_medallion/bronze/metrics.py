@@ -37,7 +37,7 @@ def get_device_data(client, customer_id):
                metrics.all_conversions_value
         FROM campaign
         WHERE segments.date DURING LAST_30_DAYS
-        
+
     """
     stream = ga_service.search_stream(customer_id=customer_id, query=query)
     device_data = []
@@ -47,15 +47,46 @@ def get_device_data(client, customer_id):
                 'campaign_id': row.campaign.id,
                 'campaign_name': row.campaign.name,
                 'campaign_type': row.campaign.advertising_channel_type.name,
-                'device': row.segments.device,
+                'device': row.segments.device.name if row.segments.device else 'Unknown',
                 'date': row.segments.date,
                 'impressions': row.metrics.impressions,
                 'clicks': row.metrics.clicks,
                 'cost_micros': row.metrics.cost_micros,
-                'all_conversions': row.metrics.all_conversions,
-                'all_conversions_value': row.metrics.all_conversions_value
+                'all_conversions': float(row.metrics.all_conversions),
+                'all_conversions_value': float(row.metrics.all_conversions_value)
             })
     return device_data
+
+
+# ========================== #
+#   CONVERSION DATA FUNCTION #
+# ========================== #
+def get_conversion_data(client, customer_id):
+    ga_service = client.get_service("GoogleAdsService")
+    query = """
+        SELECT campaign.id, campaign.name, campaign.advertising_channel_type,
+               segments.device, segments.date,
+               segments.conversion_action_name,
+               metrics.all_conversions, metrics.all_conversions_value
+        FROM campaign
+        WHERE segments.date DURING LAST_30_DAYS
+        AND segments.conversion_action_name IS NOT NULL
+    """
+    stream = ga_service.search_stream(customer_id=customer_id, query=query)
+    conversion_data = []
+    for batch in stream:
+        for row in batch.results:
+            conversion_data.append({
+                'campaign_id': row.campaign.id,
+                'campaign_name': row.campaign.name,
+                'campaign_type': row.campaign.advertising_channel_type.name,
+                'device': row.segments.device.name if row.segments.device else 'Unknown',
+                'date': row.segments.date,
+                'conversion_name': row.segments.conversion_action_name,
+                'all_conversions': float(row.metrics.all_conversions),
+                'all_conversions_value': float(row.metrics.all_conversions_value)
+            })
+    return conversion_data
 
 
 
@@ -82,33 +113,31 @@ def main():
             })
 
             df_device = pd.DataFrame(get_device_data(client, acc_id))
-           
+            df_conversion = pd.DataFrame(get_conversion_data(client, acc_id))
 
-            if df_device.empty:
+            logger.info(f"🔍 Device rows: {len(df_device)}, Conversion rows: {len(df_conversion)}")
+
+            if df_device.empty and df_conversion.empty:
                 logger.warning(f"⚠️ No data for account {acc_id}, skipping.")
                 continue
 
-            
-            
-            
+            # Concatenate device and conversion data
+            df_combined = pd.concat([df_device, df_conversion], ignore_index=True)
+            df_combined["account_id"] = acc_id
+            df_combined["account_name"] = acc_name
 
-            df_device["account_id"] = acc_id
-            df_device["account_name"] = acc_name
-
-            final_dataframes.append(df_device)
+            final_dataframes.append(df_combined)
 
         except Exception as e:
-            logger.error(f"Error in account {acc_id}: {e}")
+            logger.error(f"❌ Error in account {acc_id}: {e}")
 
-    if not final_dataframes: 
-        logger.error(f"No valid data collected. Exiting.")
+    if not final_dataframes:
+        logger.error(f"❌ No valid data collected. Exiting.")
         return
 
     df_all = pd.concat(final_dataframes, ignore_index=True)
 
-
-
-    load_to_bigquery(df_all,TABLE_ID)
+    load_to_bigquery(df_all, TABLE_ID)
 
 
 if __name__ == "__main__":                                                                   
