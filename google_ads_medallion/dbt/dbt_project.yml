@@ -1,0 +1,29 @@
+name: google_ads_pipeline
+version: '1.0.0'
+
+# This must match the "profile" key in profiles.yml
+# It's how dbt knows which connection to use
+profile: google_ads_pipeline
+
+# Where dbt looks for your .sql model files
+model-paths: ["models"]
+
+# Where dbt looks for .csv files it can load as tables (your geotargets file)
+seed-paths: ["seeds"]
+
+# Configure how each folder of models gets materialized
+# "table" = dbt runs your SELECT and stores the result as a real BigQuery table
+# "view"  = dbt creates a virtual view (no data stored, runs the query each time)
+models:
+  google_ads_pipeline:
+    silver:
+      +materialized: table
+      +schema: wr_google_ads_silver
+    gold:
+      +materialized: table
+      +schema: wr_google_ads_gold
+
+# Seed configuration
+seeds:
+  google_ads_pipeline:
+    +schema: wr_google_ads_seeds

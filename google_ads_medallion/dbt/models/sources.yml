@@ -1,0 +1,19 @@
+version: 2
+sources:                                                                                     
+    - name: bronze                                                                             
+      database: generative-ai-418805                                                           
+      schema: wr_google_ads_bronze                                                             
+      description: "Raw data from Google Ads API"                                              
+                                                                                               
+      tables:
+        - name: main
+          description: "Campaign performance metrics by device combined with conversion actions"
+
+        - name: age                                                               
+          description: "Campaign metrics by age range"                                         
+                                                                                               
+        - name: gender                                                            
+          description: "Campaign metrics by gender"                                            
+                                                                                               
+        - name: location                                                          
+          description: "Campaign metrics by geographic location"  
