@@ -36,7 +36,7 @@ def get_conversion_data(client, customer_id):
         SELECT campaign.id, campaign.name, campaign.advertising_channel_type,
                segments.device, segments.date,
                segments.conversion_action_name,
-               metrics.all_conversions, metrics.all_conversions_value
+               metrics.all_conversions, metrics.all_conversions_value,customer.currency_code
         FROM campaign
         WHERE segments.date DURING LAST_30_DAYS
         AND segments.conversion_action_name IS NOT NULL
@@ -53,7 +53,8 @@ def get_conversion_data(client, customer_id):
                 'date': row.segments.date,
                 'conversion_name': row.segments.conversion_action_name,
                 'all_conversions': float(row.metrics.all_conversions),
-                'all_conversions_value': float(row.metrics.all_conversions_value)
+                'all_conversions_value': float(row.metrics.all_conversions_value),
+                'currency_code': row.customer.currency_code
             })
     return conversion_data
 

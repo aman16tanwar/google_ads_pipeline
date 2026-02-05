@@ -34,7 +34,7 @@ def get_device_data(client, customer_id):
                segments.device, segments.date,
                metrics.impressions, metrics.clicks,
                metrics.cost_micros, metrics.all_conversions,
-               metrics.all_conversions_value
+               metrics.all_conversions_value,customer.currency_code
         FROM campaign
         WHERE segments.date DURING LAST_30_DAYS
 
@@ -53,7 +53,8 @@ def get_device_data(client, customer_id):
                 'clicks': row.metrics.clicks,
                 'cost_micros': row.metrics.cost_micros,
                 'all_conversions': float(row.metrics.all_conversions),
-                'all_conversions_value': float(row.metrics.all_conversions_value)
+                'all_conversions_value': float(row.metrics.all_conversions_value),
+                'currency_code': row.customer.currency_code
             })
     return device_data
 
