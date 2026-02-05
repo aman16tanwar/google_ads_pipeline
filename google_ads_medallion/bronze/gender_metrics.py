@@ -22,7 +22,7 @@ GOOGLE_ADS_IMPERSONATED_EMAIL = os.getenv('GOOGLE_ADS_IMPERSONATED_EMAIL')
 
 
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
-TABLE_ID = f"{GCP_PROJECT_ID}.{os.getenv('BIGQUERY_BRONZE_DATASET')}.{os.getenv('BIGQUERY_BRONZE_MAIN_CAMPAIGN_GENDER')}"
+TABLE_ID = f"{GCP_PROJECT_ID}.{os.getenv('BIGQUERY_BRONZE_DATASET')}.{os.getenv('BIGQUERY_BRONZE_MAIN_CAMPAIGN_GENDER_METRICS')}"
 
 GENDER_MAPPING = {
     10: "Male",
@@ -78,50 +78,7 @@ def get_gender_data(client, customer_id):
 
     return gender_data
 
-def get_gender_conversion_data(client, customer_id):
-    ga_service = client.get_service("GoogleAdsService")
-    query = """
-        SELECT 
-            gender_view.resource_name,
-            campaign.id,
-            campaign.name,
-            campaign.advertising_channel_type,
-            ad_group.id,
-            ad_group.name,
-            ad_group_criterion.gender.type,
-            segments.date,
-            segments.conversion_action_name,
-            metrics.all_conversions,
-            metrics.all_conversions_value
-        FROM gender_view
-        WHERE segments.date DURING LAST_30_DAYS
-        AND segments.conversion_action_name IS NOT NULL
 
-    """
-
-    stream = ga_service.search_stream(customer_id=customer_id, query=query)
-
-    conversion_data = []
-    for batch in stream:
-        for row in batch.results:
-            gender_id = row.ad_group_criterion.gender.type
-            gender_label = GENDER_MAPPING.get(gender_id, "Unknown")
-
-            conversion_data.append({
-                'resource_name': row.gender_view.resource_name,
-                'campaign_id': row.campaign.id,
-                'campaign_name': row.campaign.name,
-                'campaign_type': row.campaign.advertising_channel_type.name if row.campaign.advertising_channel_type else 'Unknown',
-                'ad_group_id': row.ad_group.id,
-                'ad_group_name': row.ad_group.name,
-                'gender': gender_label, 
-                'conversion_name': row.segments.conversion_action_name,
-                'all_conversions': row.metrics.all_conversions if row.metrics.all_conversions is not None else 0.0,
-                'all_conversions_value': row.metrics.all_conversions_value if row.metrics.all_conversions_value is not None else 0.0,
-                'date': row.segments.date
-            })
-
-    return conversion_data
 
 def main():
     accounts = fetch_enabled_accounts()
@@ -143,19 +100,14 @@ def main():
             })
 
             df_gender = pd.DataFrame(get_gender_data(client, acc_id))
-            df_conversion = pd.DataFrame(get_gender_conversion_data(client, acc_id))
-            logger.info(f"🔍 Conversion rows for account {acc_id}: {df_conversion.shape[0]}")
-
-            if df_gender.empty and df_conversion.empty:
-                logger.warning(f"⚠️ No data for account {acc_id}, skipping.")
-                continue
-
-                        # Final concat
-            df_final = pd.concat([df_gender, df_conversion], ignore_index=True)
-            df_final["account_id"]=acc_id
-            df_final["account_name"]=acc_name
-            logger.info(f"✅ After concat: {df_final.shape} ")
-            final_dataframes.append(df_final)
+            
+           
+           
+            
+            df_gender["account_id"]=acc_id
+            df_gender["account_name"]=acc_name
+            logger.info(f"✅ After concat: {df_gender.shape} ")
+            final_dataframes.append(df_gender)
 
 
         except Exception as e:

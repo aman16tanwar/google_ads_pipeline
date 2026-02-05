@@ -10,7 +10,6 @@ from utils.bigquery_loader import load_to_bigquery
 from utils.google_ads_client import fetch_enabled_accounts
 from utils.logger import setup_logger
 # ✅ Set Google Cloud credentials
-# os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "googleads-bigquery.json"
 logger=setup_logger(__name__)
 load_dotenv()
 DEVELOPER_TOKEN = os.getenv('GOOGLE_ADS_DEVELOPER_TOKEN')
@@ -22,7 +21,7 @@ GOOGLE_ADS_IMPERSONATED_EMAIL = os.getenv('GOOGLE_ADS_IMPERSONATED_EMAIL')
 
 
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
-TABLE_ID = f"{GCP_PROJECT_ID}.{os.getenv('BIGQUERY_BRONZE_DATASET')}.{os.getenv('BIGQUERY_BRONZE_MAIN_CAMPAIGN_AGE')}"
+TABLE_ID = f"{GCP_PROJECT_ID}.{os.getenv('BIGQUERY_BRONZE_DATASET')}.{os.getenv('BIGQUERY_BRONZE_MAIN_CAMPAIGN_AGE_METRICS')}"
 
 
 AGE_RANGE_MAPPING = {
@@ -82,40 +81,7 @@ def get_age_range_data(client, customer_id):
             })
     return age_data
 
-def get_conversion_data(client, customer_id):
-    ga_service = client.get_service("GoogleAdsService")
-    query = """
-        SELECT 
-            campaign.name,
-            ad_group.id,
-            ad_group.name,
-            ad_group_criterion.age_range.type,
-            segments.date,
-            segments.conversion_action_name,
-            metrics.all_conversions,
-            metrics.all_conversions_value
-        FROM age_range_view
-        WHERE segments.date DURING LAST_30_DAYS
-        AND segments.conversion_action_name IS NOT NULL
-    """
 
-    stream = ga_service.search_stream(customer_id=customer_id, query=query)
-    conversion_data = []
-    for batch in stream:
-        for row in batch.results:
-            age_id = row.ad_group_criterion.age_range.type
-            age_range_label = AGE_RANGE_MAPPING.get(age_id, "Unknown")
-
-            conversion_data.append({
-                'campaign_name': row.campaign.name,
-                'ad_group_id': row.ad_group.id,
-                'age_range': age_range_label, 
-                'conversion_name': row.segments.conversion_action_name,
-                'all_conversions': float(row.metrics.all_conversions),
-                'all_conversions_value': float(row.metrics.all_conversions_value),
-                'date': row.segments.date
-            })
-    return conversion_data
 
 def main():
     accounts = fetch_enabled_accounts()
@@ -137,16 +103,16 @@ def main():
             })
 
             df_age = pd.DataFrame(get_age_range_data(client, acc_id))
-            df_conversion = pd.DataFrame(get_conversion_data(client, acc_id))
+            
 
-            if df_age.empty and df_conversion.empty:
+            if df_age.empty:
                 logger.warning(f"⚠️ No data for account {acc_id}, skipping.")
                 continue
 
             
 
             # Concatenate safely
-            df_final = pd.concat([df_age, df_conversion], ignore_index=True)
+            df_final = pd.concat([df_age], ignore_index=True)
             df_final["account_id"] = acc_id                                                      
             df_final["account_name"] = acc_name  
             final_dataframes.append(df_final)

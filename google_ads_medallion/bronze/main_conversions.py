@@ -21,41 +21,10 @@ GOOGLE_ADS_IMPERSONATED_EMAIL = os.getenv('GOOGLE_ADS_IMPERSONATED_EMAIL')
 
 
 GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
-TABLE_ID = f"{GCP_PROJECT_ID}.{os.getenv('BIGQUERY_BRONZE_DATASET')}.{os.getenv('BIGQUERY_BRONZE_MAIN_CAMPAIGN_METRICS')}"
+TABLE_ID = f"{GCP_PROJECT_ID}.{os.getenv('BIGQUERY_BRONZE_DATASET')}.{os.getenv('BIGQUERY_BRONZE_MAIN_CAMPAIGN_CONVERSION')}"
 logger=setup_logger(__name__)
 
-# ========================== #
-#     DEVICE DATA FUNCTION   #
-# ========================== #
-def get_device_data(client, customer_id):
-    ga_service = client.get_service("GoogleAdsService")
-    query = """
-        SELECT campaign.id, campaign.name, campaign.advertising_channel_type,
-               segments.device, segments.date,
-               metrics.impressions, metrics.clicks,
-               metrics.cost_micros, metrics.all_conversions,
-               metrics.all_conversions_value
-        FROM campaign
-        WHERE segments.date DURING LAST_30_DAYS
 
-    """
-    stream = ga_service.search_stream(customer_id=customer_id, query=query)
-    device_data = []
-    for batch in stream:
-        for row in batch.results:
-            device_data.append({
-                'campaign_id': row.campaign.id,
-                'campaign_name': row.campaign.name,
-                'campaign_type': row.campaign.advertising_channel_type.name,
-                'device': row.segments.device.name if row.segments.device else 'Unknown',
-                'date': row.segments.date,
-                'impressions': row.metrics.impressions,
-                'clicks': row.metrics.clicks,
-                'cost_micros': row.metrics.cost_micros,
-                'all_conversions': float(row.metrics.all_conversions),
-                'all_conversions_value': float(row.metrics.all_conversions_value)
-            })
-    return device_data
 
 
 # ========================== #
@@ -112,21 +81,21 @@ def main():
                 'use_proto_plus': True
             })
 
-            df_device = pd.DataFrame(get_device_data(client, acc_id))
+            
             df_conversion = pd.DataFrame(get_conversion_data(client, acc_id))
 
-            logger.info(f"🔍 Device rows: {len(df_device)}, Conversion rows: {len(df_conversion)}")
+            logger.info(f"🔍 Conversion rows: {len(df_conversion)}")
 
-            if df_device.empty and df_conversion.empty:
+            if df_conversion.empty:
                 logger.warning(f"⚠️ No data for account {acc_id}, skipping.")
                 continue
 
-            # Concatenate device and conversion data
-            df_combined = pd.concat([df_device, df_conversion], ignore_index=True)
-            df_combined["account_id"] = acc_id
-            df_combined["account_name"] = acc_name
+            # Add Account ID and Name
+           
+            df_conversion["account_id"] = acc_id
+            df_conversion["account_name"] = acc_name
 
-            final_dataframes.append(df_combined)
+            final_dataframes.append(df_conversion)
 
         except Exception as e:
             logger.error(f"❌ Error in account {acc_id}: {e}")
