@@ -1,6 +1,0 @@
-{{ config(alias='age') }}
-select resource_name, campaign_id, 
-campaign_name, campaign_type, ad_group_id, ad_group_name, age_range, impressions, clicks, cost_micros / 1000000.0 as cost, all_conversions, all_conversions_value, 
-CAST(date as date) as date,conversion_name,account_id,account_name
-
-from {{ source('bronze', 'age') }}

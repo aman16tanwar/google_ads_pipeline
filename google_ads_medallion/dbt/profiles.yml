@@ -1,0 +1,11 @@
+google_ads_pipeline:
+    target: dev
+    outputs:
+      dev:
+        type: bigquery
+        method: service-account
+        project: generative-ai-418805
+        dataset: wr_google_ads_silver
+        keyfile: /Users/tagspecialist/Work/Portfolio/google_ads_pipeline/google_ads_medallion/bronze/service-account.json
+        threads: 4
+        location: northamerica-northeast2

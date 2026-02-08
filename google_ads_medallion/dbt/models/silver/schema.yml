@@ -1,0 +1,158 @@
+version: 2
+
+models:
+  - name: silver_age_metrics
+    description: "Metrics of age"
+    columns:
+      - name: account_id
+        description: "Account Id of Google Ads account"
+        tests:
+          - not_null
+      - name: campaign_id
+        description: "Campaign Id of Google Ads account"
+        tests:
+          - not_null
+      - name: ad_group_id
+        description: "Ad Group Id of Google Ads account"
+        tests:
+          - not_null 
+      - name: date
+        description: "date of the metric"
+        tests:
+          - not_null     
+      - name: age_range
+        description: "age range of the users"
+        tests:
+          - accepted_values:
+              values: ["18-24","25-34","35-44","45-54","55-64", "65+","Unknown"]
+      - name: clicks
+        description: "clicks of google ads account"
+        tests:
+          - not_null       
+      - name: impressions
+        description: "impressions of the metric"
+        tests:
+          - not_null    
+      - name: cost
+        description: "cost of the metric"
+        tests:
+          - not_null      
+      - name: video_views
+        description: "video views of the metric"
+        tests:
+          - not_null            
+
+
+          
+  - name: silver_gender_metrics
+    description: "Metrics of gender"
+    columns:
+      - name: account_id
+        description: "Account Id of Google Ads account"
+        tests:
+          - not_null
+      - name: campaign_id
+        description: "Campaign Id of Google Ads account"
+        tests:
+          - not_null
+      - name: ad_group_id
+        description: "Ad Group Id of Google Ads account"
+        tests:
+          - not_null 
+      - name: date
+        description: "date of the metric"
+        tests:
+          - not_null     
+      - name: gender
+        description: "genders of the users"
+        tests:
+          - accepted_values:
+              values: ["Male","Female","Unknown"]
+      - name: clicks
+        description: "clicks of google ads account"
+        tests:
+          - not_null       
+      - name: impressions
+        description: "impressions of the metric"
+        tests:
+          - not_null    
+      - name: cost
+        description: "cost of the metric"
+        tests:
+          - not_null      
+      - name: video_views
+        description: "video views of the metric"
+        tests:
+          - not_null    
+
+  - name: silver_location_metrics
+    description: "Metrics of location"
+    columns:
+      - name: account_id
+        description: "Account Id of Google Ads account"
+        tests:
+          - not_null
+      - name: campaign_id
+        description: "Campaign Id of Google Ads account"
+        tests:
+          - not_null
+      - name: ad_group_id
+        description: "Ad Group Id of Google Ads account"
+        tests:
+          - not_null 
+      - name: date
+        description: "date of the metric"
+        tests:
+          - not_null     
+      
+      - name: clicks
+        description: "clicks of google ads account"
+        tests:
+          - not_null       
+      - name: impressions
+        description: "impressions of the metric"
+        tests:
+          - not_null    
+      - name: cost
+        description: "cost of the metric"
+        tests:
+          - not_null      
+               
+
+  - name: silver_main_metrics
+    description: "Metrics of main"
+    columns:
+      - name: account_id
+        description: "Account Id of Google Ads account"
+        tests:
+          - not_null
+      - name: campaign_id
+        description: "Campaign Id of Google Ads account"
+        tests:
+          - not_null
+      - name: device
+        description: "device of the users"
+        tests:
+          - accepted_values:
+              values: ["DESKTOP","MOBILE","TABLET","CONNECTED_TV","OTHER"] 
+      - name: date
+        description: "date of the metric"
+        tests:
+          - not_null     
+     
+      - name: clicks
+        description: "clicks of google ads account"
+        tests:
+          - not_null       
+      - name: impressions
+        description: "impressions of the metric"
+        tests:
+          - not_null    
+      - name: cost
+        description: "cost of the metric"
+        tests:
+          - not_null      
+      - name: video_views
+        description: "video views of the metric"
+        tests:
+          - not_null   

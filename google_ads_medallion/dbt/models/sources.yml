@@ -6,14 +6,21 @@ sources:
       description: "Raw data from Google Ads API"                                              
                                                                                                
       tables:
-        - name: main
-          description: "Campaign performance metrics by device combined with conversion actions"
-
-        - name: age                                                               
-          description: "Campaign metrics by age range"                                         
-                                                                                               
-        - name: gender                                                            
+        - name: main_conversions
+          description: "Campaign performance conversion actions by device"
+        - name: main_metrics
+          description: "Campaign performance metrics by device "
+        - name: age_metrics                                                               
+          description: "Campaign metrics by age range"  
+        - name: age_conversions                                                               
+          description: "Campaign conversions by age range"                                                
+        - name: gender_metrics                                                            
           description: "Campaign metrics by gender"                                            
-                                                                                               
-        - name: location                                                          
+        - name: gender_conversions                                                          
+          description: "Campaign conversions by gender"                                                                                          
+        - name: location_metrics                                                          
           description: "Campaign metrics by geographic location"  
+        - name: location_conversions                                                          
+          description: "Campaign conversions by geographic location"                                                                                 
+                                                                                              
+          
